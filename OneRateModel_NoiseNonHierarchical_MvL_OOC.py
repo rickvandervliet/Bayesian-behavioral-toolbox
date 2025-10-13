@@ -10,11 +10,8 @@ import os
 import arviz as az
 import matplotlib.pyplot as plt
 import pandas as pd
-from openpyxl import load_workbook
-import graphviz
 from datetime import date
 import xarray as xr
-import seaborn as sns
 
 class TestData:
     def __init__(self, input_file, trial_inburn = [0, 0]):
@@ -165,15 +162,14 @@ class StateSpace:
             self.idata = pm.sample(cores=4,chains=4,draws=draws,tune=tune,init='adapt_diag',idata_kwargs={"log_likelihood": True})
 
             self.idata = pm.sample_posterior_predictive(self.idata_import,extend_inferencedata=True)
-            idata_prior = pm.sample_prior_predictive(draws=500)
 
+            idata_prior = pm.sample_prior_predictive(draws=500)
             self.idata.extend(idata_prior)
 
         self.idata.to_netcdf(output_file)
         self.save_to_xlsx(output_file.replace('.nc','.xlsx'))
-        # pm.model_to_graphviz(model).render('NonHierarchical')
 
-    def OneRateNonHierarchical_reiterate_posterior(self, prior_data="", output_file="", n_iter = 1):
+    def OneRateNonHierarchical_reiterate_posterior(self, draw = 1000, tune = 1000, prior_data="", output_file="", n_iter = 1):
         if hasattr(self, 'idata') and not prior_data:
             self.idata_prior = self.idata.posterior.copy()
         else:
@@ -190,10 +186,8 @@ class StateSpace:
                 B1mu = pm.Normal('B1mu', mu=self.idata_prior.B1mu.mean().values, sigma=self.idata_prior.B1mu.std().values)
                 B1std = pm.Gamma('B1std', mu=self.idata_prior.B1std.mean().values, sigma=self.idata_prior.B1std.std().values)
 
-                A1 = pm.Normal('A1', mu=A1mu, sigma=A1std, dims='subjects')
-                B1 = pm.Normal('B1', mu=B1mu, sigma=B1std, dims='subjects')
-                A = pm.Deterministic('A', pm.math.invlogit(A1), dims='subjects')
-                B = pm.Deterministic('B', pm.math.invlogit(B1), dims='subjects')
+                A = pm.LogitNormal('A', mu=B1mu, sigma=B1std, dims='subjects')
+                B = pm.LogitNormal('B', mu=A1mu, sigma=A1std, dims='subjects')
 
                 sigma_eta = pm.Gamma('sigma_eta', mu=self.idata_prior.sigma_eta.mean().values, sigma=self.idata_prior.sigma_eta.std().values, dims='subjects')
                 sigma_epsilon = pm.Gamma('sigma_epsilon',mu=self.idata_prior.sigma_epsilon.mean().values, sigma=self.idata_prior.sigma_epsilon.std().values, dims='subjects')
@@ -217,8 +211,8 @@ class StateSpace:
                 
                 x = pm.Deterministic('x',pt.concatenate([[x_init], x[:-1,]], axis=0), dims=['trial', 'subjects'])
                 y_hat = pm.Normal('y_hat',mu=x,sigma=sigma_total,observed=self.y,dims=['trial', 'subjects'])
-                self.idata = pm.sample(cores=4,chains=4,draws=1000,tune=1000,init='adapt_diag')
-                idata_prior_predictive = pm.sample_prior_predictive(draws=1000,var_names=['A1mu','A1std','B1mu','B1std','A','B','sigma_eta','sigma_epsilon','y_hat'])
+                self.idata = pm.sample(cores=4,chains=4,draws=draw,tune=tune,init='adapt_diag')
+                idata_prior_predictive = pm.sample_prior_predictive(var_names=['A1mu','A1std','B1mu','B1std','A','B','sigma_eta','sigma_epsilon','y_hat'])
                 self.idata.extend(idata_prior_predictive)
                 self.idata = pm.sample_posterior_predictive(self.idata,extend_inferencedata=True)
                 self.idata = pm.compute_log_likelihood(self.idata,extend_inferencedata=False)
@@ -238,10 +232,8 @@ class StateSpace:
             B1mu = pm.Normal('B1mu', mu=-2, sigma=0.25)
             B1std = pm.Gamma('B1std', mu=0.5, sigma=0.25)
 
-            A1 = pm.Normal('A1', mu=A1mu, sigma=A1std, dims='subjects')
-            B1 = pm.Normal('B1', mu=B1mu, sigma=B1std, dims='subjects')
-            A = pm.Deterministic('A', pm.math.invlogit(A1), dims='subjects')
-            B = pm.Deterministic('B', pm.math.invlogit(B1), dims='subjects')
+            A = pm.LogitNormal('A', mu=A1mu, sigma=A1std, dims='subjects')
+            B = pm.LogitNormal('B', mu=B1mu, sigma=B1std, dims='subjects')
 
             if self.method == 'Gamma':
                 etamode = pm.Gamma('etamode', mu=1, sigma=0.5)
@@ -303,12 +295,11 @@ class StateSpace:
                 var_total = pm.Gamma('var_total', mu=var_total_mu, sigma=var_total_sigma, dims='subjects')
                 sigma_total = pm.Deterministic('sigma_total',pm.math.sqrt(var_total), dims='subjects')
 
-                p1mu = pm.Normal('p1mu',mu=-1, sigma=1)#mu=-1, sigma=0.25
-                p1sigma = pm.Gamma('p1sigma',mu=1, sigma=1)#mu=0.5, sigma=0.25
+                p1mu = pm.Normal('p1mu',mu=-1, sigma=1)
+                p1sigma = pm.Gamma('p1sigma',mu=1, sigma=1)
                 
                 p1 = pm.Normal('p1', mu=p1mu, sigma=p1sigma, dims='subjects')
-                p = pm.Deterministic('p', pm.math.invlogit(p1), dims='subjects') #Hier kunnen we nog een onder en bovengrens toevoegen.
-
+                p = pm.Deterministic('p', pm.math.invlogit(p1), dims='subjects')
                 sigma_eta = pm.Deterministic('sigma_eta' ,pm.math.sqrt(p*var_total), dims='subjects')
                 sigma_epsilon = pm.Deterministic('sigma_epsilon',pm.math.sqrt((1-p)*var_total), dims='subjects')
 
@@ -319,11 +310,11 @@ class StateSpace:
                 var_total = pm.Gamma('var_total', mu=var_total_mu, sigma=var_total_sigma, dims='subjects')
                 sigma_total = pm.Deterministic('sigma_total',pm.math.sqrt(var_total), dims='subjects')
 
-                p1mu = pm.Normal('p1mu',mu=-1, sigma=1)#mu=-1, sigma=0.25
-                p1sigma = pm.Gamma('p1sigma',mu=1, sigma=1)#mu=0.5, sigma=0.25
+                p1mu = pm.Normal('p1mu',mu=-1, sigma=1)
+                p1sigma = pm.Gamma('p1sigma',mu=1, sigma=1)
                 
                 p1 = pm.TruncatedNormal('p1', mu=p1mu, sigma=p1sigma, lower=-8,dims='subjects')
-                p = pm.Deterministic('p', pm.math.invlogit(p1), dims='subjects') #Hier kunnen we nog een onder en bovengrens toevoegen.
+                p = pm.Deterministic('p', pm.math.invlogit(p1), dims='subjects') 
 
                 sigma_eta = pm.Deterministic('sigma_eta' ,pm.math.sqrt(p*var_total), dims='subjects')
                 sigma_epsilon = pm.Deterministic('sigma_epsilon',pm.math.sqrt((1-p)*var_total), dims='subjects')
@@ -355,8 +346,6 @@ class StateSpace:
             print(f'Inference data saved to {output_file}')
             
         self.save_to_xlsx(output_file.replace('.nc','.xlsx'))
-        
-        #pm.model_to_graphviz(model, save="Hierarchical-NonCentered.pdf").render("Hierarchical-NonCentered")
 
 
     def OneRateHierarchical_reiterate_posterior(self, prior_data="", output_file="", n_iter = 1):
@@ -466,180 +455,40 @@ class StateSpace:
     def create_image(self, method='', modeltype='', img_select="", output_path="", output_fname=None, idata_import = None):
         if idata_import:
             self.idata = az.from_netcdf(idata_import)
-        
-        # subject_id = xr.DataArray(self.subject_id,coords={'y_hat_observed_dim_0':range(len(self.subject_id))},name='subject_id')
-        
-        # subject_id_idata = az.convert_to_inference_data(subject_id,group='constant_data')
-        
-        # self.idata.extend(subject_id_idata)
-        
-        # self.idata.rename(name_dict={'y_hat_observed_dim_2':'y_hat_observed_dim_0'},groups='posterior_predictive',inplace=True)
 
-        # self.idata.log_likelihood["c"] = self.idata.log_likelihood.y_hat_observed.groupby(self.idata.constant_data["subject_id"]).sum()
-        # print(az.loo(self.idata, var_name='c'))
-
-        # pp = self.idata.posterior_predictive.y_hat_observed.groupby(self.idata.constant_data['subject_id'])
-        # observed = self.idata.observed_data.y_hat_observed.groupby(self.idata.constant_data['subject_id'])
-        # posterior = self.idata.posterior['y_hat'].mean(['chain','draw'])
-        # az.plot_trace(self.idata,var_names='y_hat',coords={'subjects':982})
-
-        # pd_y = pd.DataFrame(self.y,index=range(self.n_steps)).T.melt(var_name='Trial',value_name=f'Angle ({chr(176)})')
-        # y_hat_hdi = az.hdi(self.idata.posterior_predictive['y_hat'],input_core_dims=[["chain","draw", "subjects"]])
-        # _,ax = plt.subplots(1,1)
-        # ax.plot(range(self.n_steps),self.p.value[:,0],label='Perturbation')
-        # ax.plot(self.idata.posterior['trial'],self.idata.posterior_predictive['y_hat'].median(['chain','draw','subjects']),label='Posterior')
-        # az.plot_hdi(self.idata.posterior_predictive['trial'],hdi_data=y_hat_hdi,ax=ax)
-        # sns.lineplot(data = pd_y,x='Trial', y=f'Angle ({chr(176)})',estimator='mean',errorbar='sd',legend=False,ax=ax,label='Observed',color='C2')
-        # ax.legend()
-        # ax.spines['top'].set_visible(False)
-        # ax.spines['right'].set_visible(False)
-
-        # if img_select["AB"].get() == "Trace":
-        #     ax_AB = az.plot_trace(self.idata, var_names=['A','B'],combined=True,compact=True)
-        #     if output_fname: 
-        #         ax_AB.savefig(f"{output_path.get()}/{output_fname.get()}_AB_trace")
-        #     else:
-        #         ax_AB.savefig(f"{output_path}/AB_trace")
-        # elif img_select["AB"].get() == "Posterior":
-        #     ax_AB = az.plot_posterior(self.idata, var_names=['A','B'],combine_dims={'subjects'})
-        #     if output_fname: 
-        #         ax_AB.savefig(f"{output_path.get()}/{output_fname.get()}_AB_posterior")
-        #     else:
-        #         ax_AB.savefig(f"{output_path.get()}/AB_posterior")
-
-        # if img_select["Noise"].get() == "Trace":
-        #     ax_noise = az.plot_trace(self.idata, var_names=['sigma_eta','sigma_epsilon','sigma_total'])
-        #     if output_fname: 
-        #         ax_noise.savefig(f"{output_path.get()}/{output_fname.get()}_Noise_trace")
-        #     else:
-        #         ax_noise.savefig(f"{output_path}/Noise_trace")
-        # elif img_select["Noise"].get() == "Posterior":
-        #     ax_noise = az.plot_posterior(self.idata, var_names=['sigma_eta','sigma_epsilon','sigma_total'],combine_dims={'subjects'})
-        #     if output_fname: 
-        #         ax_noise.savefig(f"{output_path.get()}/{output_fname.get()}_Noise_posterior")
-        #     else:
-        #         ax_noise.savefig(f"{output_path}/Noise_posterior")
-
-        # if modeltype["hierarchical"].get() == "Hierarchical":
-        #     if img_select["Noise_prior_gamma"].get() == "Trace":
-        #         ax_prior = az.plot_trace(self.idata, var_names=['eta_mode','eta_var','epsilon_mode','epsilon_var'])
-        #         if output_fname: 
-        #             ax_prior.savefig(f"{output_path.get()}/{output_fname.get()}_Hyperparams_trace")
-        #         else:
-        #             ax_prior.savefig(f"{output_path}/Hyperparams_trace")
-        #     elif img_select["Noise_prior_gamma"].get() == "Posterior":
-        #         ax_prior = az.plot_trace(self.idata, var_names=['eta_mode','eta_var','epsilon_mode','epsilon_var'])
-        #         if output_fname: 
-        #             ax_prior.savefig(f"{output_path.get()}/{output_fname.get()}_Hyperparams_posterior")
-        #         else:
-        #             ax_prior.savefig(f"{output_path}/Hyperparams_posterior")
-        #     elif img_select["Noise_prior_ratio"].get() == "Trace":
-        #         ax_prior = az.plot_trace(self.idata, var_names=['p','p1','p1mu','p1sigma'])
-        #         if output_fname: 
-        #             ax_prior.savefig(f"{output_path.get()}/{output_fname.get()}_Hyperparams_trace")
-        #         else:
-        #             ax_prior.savefig(f"{output_path}/Hyperparams_trace")
-        #     elif img_select["Noise_prior_ratio"].get() == "Posterior":
-        #         ax_prior = az.plot_posterior(self.idata, var_names=['p','p1','p1mu','p1sigma'])
-        #         if output_fname: 
-        #             ax_prior.savefig(f"{output_path.get()}/{output_fname.get()}_Hyperparams_posterior")
-        #         else:
-        #             ax_prior.savefig(f"{output_path}/Hyperparams_posterior")
-        #     elif img_select["Noise_prior_NonCentered"].get() == "Trace":
-        #         ax_prior = az.plot_trace(self.idata, var_names=['var_total_mu','var_total_sigma','var_total'])
-        #         if output_fname: 
-        #             ax_prior.savefig(f"{output_path.get()}/{output_fname.get()}_Hyperparams_trace")
-        #         else:
-        #             ax_prior.savefig(f"{output_path}/Hyperparams_trace")
-        #     elif img_select["Noise_prior_NonCentered"].get() == "Posterior":
-        #         ax_prior = az.plot_posterior(self.idata, var_names=['var_total_mu','var_total_sigma','var_total'])
-        #         if output_fname: 
-        #             ax_prior.savefig(f"{output_path.get()}/{output_fname.get()}_Hyperparams_posterior")
-        #         else:
-        #             ax_prior.savefig(f"{output_path}/Hyperparams_posterior")
-
+        ## Markov chain trace ##
         # az.plot_trace(self.idata, var_names=['p','p1','p1mu','p1sigma'])
         # az.plot_trace(self.idata, var_names=['p','p1'])
         
         # az.plot_trace(self.idata, var_names=['var_total_mu','var_total_sigma','var_total'])
         # az.plot_trace(self.idata, var_names=['etamode','etavar'])
         # az.plot_trace(self.idata, var_names=['sigma_eta','sigma_epsilon','sigma_total'])
-        # az.plot_trace(self.idata, var_names=['sigma_eta'],coords={'subjects': [8]})
-        # az.plot_trace(self.idata, var_names=['A1','B1'],coords={'subjects': [41]})
 
         # az.plot_trace(self.idata, var_names=['eta_mode','eta_var', 'var_norm'])
         
         # az.plot_trace(self.idata, var_names=['A1mu','A1std','B1mu','B1std'])
-        # az.plot_trace(self.idata, var_names=['A1','B1'])
-        # az.plot_trace(self.idata, var_names=['A','B'])
-        # az.plot_posterior(self.idata, var_names=['A1','B1'],combine_dims={'subjects'})
-        # az.plot_density(self.idata,group="prior",var_names=['A1'],combine_dims={'subjects'},hdi_prob=.99,point_estimate=None)
-        
-        # az.plot_dist_comparison(self.idata,var_names=["y_hat"],combine_dims={'subjects','trial'})
-        # az.plot_ppc(self.idata, data_pairs={'y_hat_observed':'y_hat'}, group='posterior')
+        # az.plot_trace(self.idata, var_names=['A','B'])        
 
-        # az.plot_density(self.idata, var_names=['y_imputed'],combine_dims={'subjects','trial'})
-        
+
+        ## prior/posterior comparison ##
 
         # az.plot_dist_comparison(self.idata,var_names=["A1mu","A1std"])
         # az.plot_dist_comparison(self.idata,var_names=["B1mu","B1std"])
-        # az.plot_dist_comparison(self.idata,var_names=["A1","B1"],combine_dims={'subjects'})
         # az.plot_dist_comparison(self.idata,var_names=["A"],combine_dims={'subjects'})
         # az.plot_dist_comparison(self.idata,var_names=["B"],combine_dims={'subjects'})
         # az.plot_dist_comparison(self.idata,var_names=["sigma_epsilon"],combine_dims={'subjects'})
         # az.plot_dist_comparison(self.idata,var_names=["sigma_eta"],combine_dims={'subjects'})
         # # az.plot_dist_comparison(self.idata,var_names=["var_total"],combine_dims={'subjects'})
 
-        # print(az.summary(self.idata,var_names='y_hat',coords={'subjects': [0]}))
-        # print(az.loo(self.idata))
-        # print(az.waic(self.idata))
+        ## Energy plot ##
 
         # _,ax = plt.subplots()
         # az.plot_energy(self.idata,ax=ax)
         # ax.spines['top'].set_visible(False)
         # ax.spines['right'].set_visible(False)
 
-        # y_observed = self.idata.observed_data.y_hat_observed.values
-        # y = np.nan([self.n_steps,self.n_subjects])
-        # y[~self.y_mask] = y_observed
-        # print(y)
 
-        # hdi_y_unobserved = az.hdi(post_y_unobserved, skipna = True,input_core_dims = [["chain","draw", "subjects"]])
-        # post_y_observed = self.idata.posterior.y_imputed.where(~self.y_mask)
-        
-        # post_x = az.hdi(self.idata.posterior.x, skipna = True,input_core_dims = [["chain","draw", "subjects"]])
-        # _,ax = plt.subplots()
-        # ax.plot(range(self.n_steps),np.nanmean(self.y,1))
-        # az.plot_hdi(range(self.n_steps),hdi_data=post_x, ax=ax)
-
-        # y_obs = az.convert_to_inference_data(self.y)
-        # y_obs_hdi = az.hdi(y_obs, skipna = True,input_core_dims = [["draw"]])
-        # post_y = az.hdi(self.idata.posterior.y_hat, skipna = True,input_core_dims = [["chain","draw", "subjects"]])
-        # _,ax = plt.subplots()
-        # # ax.plot(range(self.n_steps),np.nanmean(self.y,1))
-        # az.plot_hdi(range(self.n_steps),hdi_data=y_obs_hdi, color='k', ax=ax)
-        # az.plot_hdi(range(self.n_steps),hdi_data=post_y, ax=ax)
-        # _,ax = plt.subplots()
-        # ax.plot(post_y_observed.mean(("chain", "draw",'subjects')),'*')
-        # az.plot_hdi(range(self.n_steps),hdi_data=hdi_y_unobserved,ax=ax)
-
-        # _,ax2 = plt.subplots()
-        # # ax2.plot(post_y_unobserved.mean(("chain", "draw")),'*')
-        # ax2.plot(self.idata.posterior.y_imputed.mean(("chain", "draw",'subjects')),'*')
-        # az.plot_hdi(range(self.n_steps),hdi_data=hdi_x,ax=ax2)
-
-        # az.plot_ppc(self.idata,group="prior",observed=True)
-        # az.plot_ppc(self.idata,group="posterior",observed=True,data_pairs={'y_hat_observed':'y_hat'},coords={'subjects':0})
-
-        # n_nan = []
-        # for i in range(self.n_subjects):
-        #     n_nan.append(sum(np.isnan(self.y[:,i])))
-        # print(max(n_nan))
-        # # print(az.rhat(self.idata.posterior,var_names='sigma_eta')['sigma_eta'])
-        # plt.scatter(n_nan,az.rhat(self.idata.posterior,var_names='sigma_eta')['sigma_eta'],alpha=0.5)
-        # plt.plot(np.unique(n_nan), np.poly1d(np.polyfit(n_nan, az.rhat(self.idata.posterior,var_names='sigma_eta')['sigma_eta'], 1))
-        #          (np.unique(n_nan)), color='red')
-
+        ## Posterior distributions A,B,sigma eta, sigma epsilon ##
 
         # _,(ax,ax2) = plt.subplots(1,2)
         # az.plot_posterior(self.idata,var_names=['A'],combine_dims={'subjects'},point_estimate='median',ax=ax,label='A')
@@ -653,6 +502,9 @@ class StateSpace:
 
         # _,ax = plt.subplots(2,2,sharex='row')
         # az.plot_posterior(self.idata,var_names=['A','B','sigma_eta','sigma_epsilon'],combine_dims={'subjects'},point_estimate='median',ax=ax)
+
+
+        ## Posterior Predictive Checks ##
 
         # fig = plt.figure(figsize=[8,8],layout='constrained')
         # ax = fig.add_subplot(3,2,1)
@@ -703,14 +555,10 @@ class StateSpace:
         
     def model_comparison(self, cvtype = 'loo', idata = dict, output_file = str):
         log_data = {}
-        # subject_id = xr.DataArray(self.subject_id,coords={'y_hat_observed_dim_0':range(len(self.subject_id))},name='subject_id')
-        
-        # subject_id_idata = az.convert_to_inference_data(subject_id,group='constant_data')
         if cvtype == 'loo':
             for data in idata:
                 if type(idata[data]) == str:
                     log_data[data] = az.from_netcdf(idata[data])
-                    # print(az.loo(log_data[data]))
                 else:
                     log_data[data] = idata[data]
 
@@ -723,7 +571,6 @@ class StateSpace:
             for data in idata:
                 if type(idata[data]) == str:
                     log_data[data] = az.from_netcdf(idata[data])
-                    # print(az.loo(log_data[data]))
                     log_data[data].extend(subject_id_idata)
                     log_data[data].log_likelihood["c"] = log_data[data].log_likelihood.y_hat_observed.groupby(log_data[data].constant_data["subject_id"]).sum()
                 else:
