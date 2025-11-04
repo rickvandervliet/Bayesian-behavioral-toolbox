@@ -38,5 +38,5 @@ jax = "*"
 numpyro = "*"
 
 [pypi-dependencies]
-pymc-extras = { git = "https://github.com/opherdonchin/pymc-extras.git", rev = "named_state_space" }
+pymc-extras = { git = "https://github.com/opherdonchin/pymc-extras.git", rev = "main" }
 kulprit = "*"

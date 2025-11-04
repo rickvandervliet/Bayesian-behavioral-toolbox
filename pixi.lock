@@ -441,7 +441,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/a5/9a/dab0d2a243dd66b286fbfaec9ed50a3996c5484aabfb1ffb951f95e5eae0/kulprit-0.4.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a1/6b/83661fa77dcefa195ad5f8cd9af3d1a7450fd57cc883ad04d65446ac2029/pydantic-2.12.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/18/62/273dd70b0026a085c7b74b000394e1ef95719ea579c76ea2f0cc8893736d/pydantic_core-2.41.4-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-      - pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=named_state_space#32abe4be5d77b5c0eec5ccbebc301448701ee80e
+      - pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=main#29b6ec084fb49a8adb2bf5a7b6ebbd8540250e39
       - pypi: https://files.pythonhosted.org/packages/46/af/c5e286471b7d10871b811b72ae794ac5fe2989c0a2df07f0ec723030f5f5/scikit_learn-1.7.2-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl
 packages:
@@ -5075,9 +5075,9 @@ packages:
   - pkg:pypi/pymc?source=hash-mapping
   size: 357095
   timestamp: 1761336630734
-- pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=named_state_space#32abe4be5d77b5c0eec5ccbebc301448701ee80e
+- pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=main#29b6ec084fb49a8adb2bf5a7b6ebbd8540250e39
   name: pymc-extras
-  version: 0.1.dev378+g32abe4be5
+  version: 0.1.dev378+g29b6ec084
   requires_dist:
   - better-optimize>=0.1.5
   - preliz>=0.20.0
