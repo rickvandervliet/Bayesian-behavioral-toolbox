@@ -36,7 +36,7 @@ preliz = "*"
 threadpoolctl = "*"
 
 [pypi-dependencies]
-kulprit = "*"
 pymc-extras = { git = "https://github.com/opherdonchin/pymc-extras.git", rev = "main" }
-numpyro = "*"
+kulprit = "*"
 jax = "*"
+numpyro = "*"
