@@ -284,10 +284,14 @@ def main():
     # Run one rate hierarchical model
     idata,mod = run_motor_adaptation_model(Y, V, P, two_rate=False, hierarchical=True)
     idata.to_netcdf('output/jonker-neuroimage-2021/motor-adaptation-one-rate.nc')
+    with open('output/jonker-neuroimage-2021/motor-adaptation-one-rate.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # Run two rate hierarchical model
     idata,mod = run_motor_adaptation_model(Y, V, P, two_rate=True, hierarchical=True)
     idata.to_netcdf('output/jonker-neuroimage-2021/motor-adaptation-two-rate.nc')
+    with open('output/jonker-neuroimage-2021/motor-adaptation-two-rate.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # Generate data for the one and two rate adaptation models
     num_trials = 110
@@ -305,21 +309,43 @@ def main():
     # Estimate parameters with Bayesian or EM implementations of one and two rate models
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=False, hierarchical=False)
     idata.to_netcdf('output/simulations/data-one-rate-model-one-rate-non-hierarchical.nc')
+    with open('output/simulations/data-one-rate-model-one-rate-non-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=False, hierarchical=True)
     idata.to_netcdf('output/simulations/data-one-rate-model-one-rate-hierarchical.nc')
+    with open('output/simulations/data-one-rate-model-one-rate-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=True, hierarchical=False)
     idata.to_netcdf('output/simulations/data-one-rate-model-two-rate-non-hierarchical.nc')
+    with open('output/simulations/data-one-rate-model-two-rate-non-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=True, hierarchical=True)
     idata.to_netcdf('output/simulations/data-one-rate-model-two-rate-hierarchical.nc')
+    with open('output/simulations/data-one-rate-model-two-rate-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=False, hierarchical=False)
     idata.to_netcdf('output/simulations/data-two-rate-model-one-rate-non-hierarchical.nc')
+    with open('output/simulations/data-two-rate-model-one-rate-non-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=False, hierarchical=True)
     idata.to_netcdf('output/simulations/data-two-rate-model-one-rate-hierarchical.nc')
+    with open('output/simulations/data-two-rate-model-one-rate-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=True, hierarchical=False)
     idata.to_netcdf('output/simulations/data-two-rate-model-two-rate-non-hierarchical.nc')
+    with open('output/simulations/data-two-rate-model-two-rate-non-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=True, hierarchical=True)
     idata.to_netcdf('output/simulations/data-two-rate-model-two-rate-hierarchical.nc')
+    with open('output/simulations/data-two-rate-model-two-rate-hierarchical.pickle', 'wb') as handle:
+        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
 if __name__ == '__main__':
     main()
