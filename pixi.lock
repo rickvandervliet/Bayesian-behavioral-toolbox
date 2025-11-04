@@ -819,7 +819,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/23/cd/066e86230ae37ed0be70aae89aabf03ca8d9f39c8aea0dec8029455b5540/opt_einsum-3.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a1/6b/83661fa77dcefa195ad5f8cd9af3d1a7450fd57cc883ad04d65446ac2029/pydantic-2.12.3-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/be/d8/fd0de71f39db91135b7a26996160de71c073d8635edfce8b3c3681be0d6d/pydantic_core-2.41.4-cp313-cp313-win_amd64.whl
-      - pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=main#190ee044a7f74893af64e775ef9cfb6a5fe1f911
+      - pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=main#ed19c342f901e20267dfd4323797752b7499720b
       - pypi: https://files.pythonhosted.org/packages/a7/c7/03000262759d7b6f38c836ff9d512f438a70d8a8ddae68ee80de72dcfb63/scikit_learn-1.7.2-cp313-cp313-win_amd64.whl
       - pypi: https://files.pythonhosted.org/packages/d0/30/dc54f88dd4a2b5dc8a0279bdd7270e735851848b762aeb1c1184ed1f6b14/tqdm-4.67.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/dc/9b/47798a6c91d8bdb567fe2698fe81e0c6b7cb7ef4d13da4114b41d239f65d/typing_inspection-0.4.2-py3-none-any.whl
@@ -7917,30 +7917,6 @@ packages:
 - pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=main#ed19c342f901e20267dfd4323797752b7499720b
   name: pymc-extras
   version: 0.1.dev377+ged19c342f
-  requires_dist:
-  - better-optimize>=0.1.5
-  - preliz>=0.20.0
-  - pydantic>=2.0.0
-  - pymc>=5.24.1
-  - pytensor>=2.31.4
-  - scikit-learn
-  - dask[complete]<2025.1.1 ; extra == 'complete'
-  - xhistogram ; extra == 'complete'
-  - dask[complete]<2025.1.1 ; extra == 'dask-histogram'
-  - xhistogram ; extra == 'dask-histogram'
-  - blackjax ; extra == 'dev'
-  - dask[all]<2025.1.1 ; extra == 'dev'
-  - pytest-mock ; extra == 'dev'
-  - pytest>=6.0 ; extra == 'dev'
-  - statsmodels ; extra == 'dev'
-  - nbsphinx>=0.4.2 ; extra == 'docs'
-  - pymc-sphinx-theme>=0.16 ; extra == 'docs'
-  - sphinx>=4.0 ; extra == 'docs'
-  - xhistogram ; extra == 'histogram'
-  requires_python: '>=3.11'
-- pypi: git+https://github.com/opherdonchin/pymc-extras.git?rev=main#190ee044a7f74893af64e775ef9cfb6a5fe1f911
-  name: pymc-extras
-  version: 0.1.dev380+g190ee044a
   requires_dist:
   - better-optimize>=0.1.5
   - preliz>=0.20.0
