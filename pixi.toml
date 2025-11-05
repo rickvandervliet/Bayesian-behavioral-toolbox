@@ -8,6 +8,9 @@ preview = ["pixi-build"]
 
 [tasks]
 
+[system-requirements]
+cuda = "12.0"
+
 [dependencies]
 arviz = "*"
 pymc = "*"
@@ -34,9 +37,9 @@ nutpie = "*"
 bambi = "*"
 preliz = "*"
 threadpoolctl = "*"
-jax = "*"
 numpyro = "*"
 
 [pypi-dependencies]
 pymc-extras = { git = "https://github.com/opherdonchin/pymc-extras.git", rev = "main" }
 kulprit = "*"
+jax = {version = "*", extras = ["cuda12"]}
