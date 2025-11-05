@@ -220,7 +220,8 @@ def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical):
                     var_epsilon=var_epsilon_i,
                     num_trials=num_trials
                 )
-    idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="nutpie", nuts_sampler_kwargs={"backend": "jax", "gradient_backend": "jax"}, progressbar=False)
+    #idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="nutpie", nuts_sampler_kwargs={"backend": "jax", "gradient_backend": "jax"}, progressbar=False)
+    idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="numpyro", nuts_sampler_kwargs={"chain_method": "vectorized"})
     return idata,mod
 
 def main():
