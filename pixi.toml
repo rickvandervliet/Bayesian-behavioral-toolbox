@@ -39,7 +39,7 @@ preliz = "*"
 threadpoolctl = "*"
 numpyro = "*"
 jax = "*"
-jaxlib = "*"
+#jaxlib = "*"
 
 [pypi-dependencies]
 pymc-extras = { git = "https://github.com/opherdonchin/pymc-extras.git", rev = "main" }

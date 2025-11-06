@@ -315,15 +315,13 @@ def main():
 
     # Run one rate hierarchical model
     idata,mod = run_motor_adaptation_model(Y, V, P, two_rate = False, hierarchical=True)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/jonker-neuroimage-2021/motor-adaptation-one-rate.nc')
-    with open('output/jonker-neuroimage-2021/motor-adaptation-one-rate.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # Run two rate hierarchical model
     idata,mod = run_motor_adaptation_model(Y, V, P, two_rate = True, hierarchical=True)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/jonker-neuroimage-2021/motor-adaptation-two-rate.nc')
-    with open('output/jonker-neuroimage-2021/motor-adaptation-two-rate.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     param_file = 'output/jonker-neuroimage-2021/motor-adaptation-one-rate.nc'
     p_o_r = az.from_netcdf(param_file)
@@ -368,50 +366,43 @@ def main():
     perturbation[:,20:60] = 30
     y_obs_one_rate,gen_params_one_rate = generate_data(perturbation, vision, p_o_r)
     y_obs_two_rate,gen_params_two_rate = generate_data(perturbation, vision, p_t_r)
-    with open('output/simulations/gen_params.pickle', 'wb') as handle:
+    with open('output/simulations/gen_params_one_rate.pickle', 'wb') as handle:
         pickle.dump(gen_params_one_rate, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('output/simulations/gen_params_two_rate.pickle', 'wb') as handle:        
         pickle.dump(gen_params_two_rate, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     # Estimate parameters with Bayesian or EM implementations of one and two rate models
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=False, hierarchical=False, priors=p_o_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-one-rate-model-one-rate-non-hierarchical.nc')
-    with open('output/simulations/data-one-rate-model-one-rate-non-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=False, hierarchical=True, priors=p_o_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-one-rate-model-one-rate-hierarchical.nc')
-    with open('output/simulations/data-one-rate-model-one-rate-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=True, hierarchical=False, priors=p_t_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-one-rate-model-two-rate-non-hierarchical.nc')
-    with open('output/simulations/data-one-rate-model-two-rate-non-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=True, hierarchical=True, priors=p_t_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-one-rate-model-two-rate-hierarchical.nc')
-    with open('output/simulations/data-one-rate-model-two-rate-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=False, hierarchical=False, priors=p_o_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-two-rate-model-one-rate-non-hierarchical.nc')
-    with open('output/simulations/data-two-rate-model-one-rate-non-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=False, hierarchical=True, priors=p_o_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-two-rate-model-one-rate-hierarchical.nc')
-    with open('output/simulations/data-two-rate-model-one-rate-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=True, hierarchical=False, priors=p_t_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-two-rate-model-two-rate-non-hierarchical.nc')
-    with open('output/simulations/data-two-rate-model-two-rate-non-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
     idata,mod = run_motor_adaptation_model(y_obs_two_rate, vision, perturbation, two_rate=True, hierarchical=True, priors=p_t_r)
+    pm.sample_posterior_predictive(idata,model=mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-two-rate-model-two-rate-hierarchical.nc')
-    with open('output/simulations/data-two-rate-model-two-rate-hierarchical.pickle', 'wb') as handle:
-        pickle.dump(mod, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
+    
 if __name__ == '__main__':
     main()
