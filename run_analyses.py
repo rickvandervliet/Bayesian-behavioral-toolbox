@@ -3,6 +3,7 @@ import pymc as pm
 import arviz as az
 import numpy as np
 import pickle
+import platform
 from behavioral_models.motor_adaptation_one_rate import motor_adaptation_one_rate
 from behavioral_models.motor_adaptation_two_rate import motor_adaptation_two_rate
 
@@ -211,8 +212,10 @@ def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical, **kwargs):
                     var_epsilon=var_epsilon_i,
                     num_trials=num_trials
                 )
-    idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="nutpie", nuts_sampler_kwargs={"backend": "jax", "gradient_backend": "jax"})
-    #idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="numpyro")
+        if platform.system() == 'Windows':
+            idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="nutpie", nuts_sampler_kwargs={"backend": "jax", "gradient_backend": "jax"})
+        else:     
+            idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="numpyro", nuts_sampler_kwargs={"chain_method": "vectorized"})
     return idata,mod
 
 def generate_data(perturbation, vision, priors):
