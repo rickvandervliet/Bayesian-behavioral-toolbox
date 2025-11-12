@@ -330,7 +330,7 @@ def main():
         pm.sample_posterior_predictive(idata,mod,extend_inferencedata=True)
         idata.to_netcdf(fname)
     else:
-        print('Using existing fit for the one rate model.')        
+        print('Using existing fit for the two rate model.')        
 
     param_file = 'output/jonker-neuroimage-2021/motor-adaptation-one-rate.nc'
     p_o_r = az.from_netcdf(param_file)

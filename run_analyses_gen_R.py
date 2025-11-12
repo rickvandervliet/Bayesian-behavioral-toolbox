@@ -1,48 +1,12 @@
-# -*- coding: utf-8 -*-
+from scipy.io import loadmat
 import pymc as pm
 import arviz as az
 import numpy as np
-import matplotlib.pyplot as plt
+import pickle
+import platform
 from behavioral_models.motor_adaptation_one_rate import motor_adaptation_one_rate
 from behavioral_models.motor_adaptation_two_rate import motor_adaptation_two_rate
-import time
-import platform
-
-# Generate data
-num_trials = 110
-num_subjects = 100
-vision = np.ones((num_subjects, num_trials))
-vision[:,5::10] = 0
-perturbation = np.zeros((num_subjects, num_trials))  # initialize all to 0
-perturbation[:,20:60] = 30
-perturbation[:,0] = 30
-perturbation[:,num_trials-1] = 30
-
-# Model parameters
-A_gen = np.random.normal(4,1,num_subjects)
-A_gen = 1/(1+(np.exp((-A_gen))))
-B_gen = np.random.normal(-2,1,num_subjects)
-B_gen = 1/(1+(np.exp((-B_gen))))
-
-sigma_eta_gen = np.random.gamma(2,0.5,(num_subjects,1))
-sigma_epsilon_gen = np.random.gamma(4,1,(num_subjects,1))
-
-# initialize
-x = np.zeros((num_subjects, num_trials+1))
-y_obs = np.zeros((num_subjects, num_trials))
-
-# noise 
-eta_gen = np.random.normal(0, sigma_eta_gen, [num_subjects, num_trials+1])
-epsilon_gen = np.random.normal(0, sigma_epsilon_gen, [num_subjects,num_trials])
-
-# step 0
-x[0,:] = eta_gen[0,:]
-
-# update
-for s in range(num_subjects):
-    for t in range(num_trials):
-        y_obs[s,t] = x[s,t] + perturbation[s,t] + epsilon_gen[s,t]
-        x[s,t+1] = A_gen[s] * x[s,t] - vision[s,t] * B_gen[s] * y_obs[s,t] + eta_gen[s,t+1]
+import os.path
 
 def build_motor_adaptation_one_rate_model(subject_id, Y, P, V, A, B, var_eta, var_epsilon, num_trials):
     tsm = motor_adaptation_one_rate(name=f"S{subject_id}", perturbation=P, vision=V, A=A, B=B, var_eta=var_eta, var_epsilon=var_epsilon, num_trials=num_trials)
@@ -52,7 +16,7 @@ def build_motor_adaptation_two_rate_model(subject_id, Y, P, V, Af, As, Bf, Bs, v
     tsm = motor_adaptation_two_rate(name=f"S{subject_id}", perturbation=P, vision=V, Af=Af, As=As, Bf=Bf, Bs=Bs, var_etaf=var_etaf, var_etas=var_etas, var_epsilon=var_epsilon, num_trials=num_trials)
     tsm.build_statespace_graph(data=Y)
 
-def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical):
+def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical, **kwargs):
     num_subjects = Y.shape[0]
     num_trials = Y.shape[1]+1
     
@@ -67,25 +31,43 @@ def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical):
     'shock': ['var_eta', 'var_epsilon'],
     'shock_aux': ['var_eta', 'var_epsilon'],
     'subjects': np.arange(num_subjects)}
+    
+    priors = kwargs.get('priors', None)
 
     with pm.Model(coords=coords) as mod:
         if two_rate:
+            if priors is None:
+                priors = {'imAf_logit_mu_mu':0,'imAf_logit_mu_sd':1,
+                'imAf_logit_sd_mu':2,'imAf_logit_sd_sd':1,
+                'imAs_logit_mu_mu':0,'imAs_logit_mu_sd':1,
+                'imAs_logit_sd_mu':2,'imAs_logit_sd_sd':1,
+                'Bf_logit_mu_mu':0,'Bf_logit_mu_sd':1,
+                'Bf_logit_sd_mu':2,'Bf_logit_sd_sd':1,
+                'Bs1_logit_mu_mu':0,'Bs1_logit_mu_sd':1,
+                'Bs1_logit_sd_mu':2,'Bs1_logit_sd_sd':1,
+                'var_total_mu_mu':2,'var_total_mu_sd':1,
+                'var_total_sd_mu':2,'var_total_sd_sd':1,
+                'ratio_logit_mu_mu':0,'ratio_logit_mu_sd':1,
+                'ratio_logit_sd_mu':2,'ratio_logit_sd_sd':1,
+                'ratio2_logit_mu_mu':0,'ratio2_logit_mu_sd':1,
+                'ratio2_logit_sd_mu':2,'ratio2_logit_sd_sd':1
+                }
             if hierarchical:
                 # Shared hyperparameters
-                imAf_logit_mu = pm.Normal("imAf_logit_mu", mu=0, sigma=1)
-                imAf_logit_sd = pm.Gamma("imAf_logit_sd", mu=2, sigma=1)
-                imAs_logit_mu = pm.Normal("imAs_logit_mu", mu=0, sigma=1)
-                imAs_logit_sd = pm.Gamma("imAs_logit_sd", mu=2, sigma=1)
-                Bf_logit_mu = pm.Normal("Bf_logit_mu", mu=0, sigma=1)
-                Bf_logit_sd = pm.Gamma("Bf_logit_sd", mu=2, sigma=1)
-                Bs1_logit_mu = pm.Normal("Bs1_logit_mu", mu=0, sigma=1)
-                Bs1_logit_sd = pm.Gamma("Bs1_logit_sd", mu=2, sigma=1)
-                var_total_mu = pm.Gamma("var_total_mu", mu=2, sigma=1)
-                var_total_sd = pm.Gamma("var_total_sd", mu=2, sigma=1)
-                ratio_logit_mu = pm.Normal("ratio_logit_mu", mu=0, sigma=1)
-                ratio_logit_sd = pm.Gamma("ratio_logit_sd", mu=2, sigma=1)
-                ratio2_logit_mu = pm.Normal("ratio2_logit_mu", mu=0, sigma=1)
-                ratio2_logit_sd = pm.Gamma("ratio2_logit_sd", mu=2, sigma=1)
+                imAf_logit_mu = pm.Normal("imAf_logit_mu", mu=priors['imAf_logit_mu_mu'], sigma=priors['imAf_logit_mu_sd'])
+                imAf_logit_sd = pm.Gamma("imAf_logit_sd", mu=priors['imAf_logit_sd_mu'], sigma=priors['imAf_logit_sd_sd'])
+                imAs_logit_mu = pm.Normal("imAs_logit_mu", mu=priors['imAs_logit_mu_mu'], sigma=priors['imAs_logit_mu_sd'])
+                imAs_logit_sd = pm.Gamma("imAs_logit_sd", mu=priors['imAs_logit_sd_mu'], sigma=priors['imAs_logit_sd_sd'])
+                Bf_logit_mu = pm.Normal("Bf_logit_mu", mu=priors['Bf_logit_mu_mu'], sigma=priors['Bf_logit_mu_sd'])
+                Bf_logit_sd = pm.Gamma("Bf_logit_sd", mu=priors['Bf_logit_sd_mu'], sigma=priors['Bf_logit_sd_sd'])
+                Bs1_logit_mu = pm.Normal("Bs1_logit_mu", mu=priors['Bs1_logit_mu_mu'], sigma=priors['Bs1_logit_mu_sd'])
+                Bs1_logit_sd = pm.Gamma("Bs1_logit_sd", mu=priors['Bs1_logit_sd_mu'], sigma=priors['Bs1_logit_sd_sd'])
+                var_total_mu = pm.Gamma("var_total_mu", mu=priors['var_total_mu_mu'], sigma=priors['var_total_mu_sd'])
+                var_total_sd = pm.Gamma("var_total_sd", mu=priors['var_total_sd_mu'], sigma=priors['var_total_sd_sd'])
+                ratio_logit_mu = pm.Normal("ratio_logit_mu", mu=priors['ratio_logit_mu_mu'], sigma=priors['ratio_logit_mu_sd'])
+                ratio_logit_sd = pm.Gamma("ratio_logit_sd", mu=priors['ratio_logit_sd_mu'], sigma=priors['ratio_logit_sd_sd'])
+                ratio2_logit_mu = pm.Normal("ratio2_logit_mu", mu=priors['ratio2_logit_mu_mu'], sigma=priors['ratio2_logit_mu_sd'])
+                ratio2_logit_sd = pm.Gamma("ratio2_logit_sd", mu=priors['ratio2_logit_sd_mu'], sigma=priors['ratio2_logit_sd_sd'])
 
                 # Subject-level parameters (with dims)
                 imAf_logit = pm.Normal("imAf_logit", mu=imAf_logit_mu, sigma=imAf_logit_sd, dims=["subjects"])  
@@ -112,21 +94,21 @@ def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical):
                 sigma_epsilon = pm.Deterministic("sigma_epsilon", pm.math.sqrt(var_epsilon), dims=["subjects"])
             else:
                 # Subject-level parameters (with dims)
-                imAf_logit = pm.Normal("imAf_logit", mu=-0.4, sigma=0.15, dims=["subjects"])  
+                imAf_logit = pm.Normal("imAf_logit", mu=priors['imAf_logit_mu_mu'], sigma=priors['imAf_logit_sd_mu'], dims=["subjects"])  
                 imAf = pm.Deterministic("imAf", pm.math.sigmoid(imAf_logit), dims=["subjects"]) # Centered around sigmoid(-0.4) ≈ 0.4 = imA
                 Af = pm.Deterministic("Af", 1.0 - imAf, dims=["subjects"])                      # Af = 0.6
-                imAs_logit = pm.Normal("imAs_logit", mu=0, sigma=0.5, dims=["subjects"])
+                imAs_logit = pm.Normal("imAs_logit", mu=priors['imAs_logit_mu_mu'], sigma=priors['imAs_logit_sd_mu'], dims=["subjects"])
                 imAs = pm.Deterministic("imAs", pm.math.sigmoid(imAs_logit), dims=["subjects"]) # Centered around sigmoid(0) ≈ 0.5 = imAs
                 As = pm.Deterministic("As", 1.0 - imAf * imAs, dims=["subjects"])  #  As > Af
-                Bf_logit = pm.Normal("Bf_logit", mu=-1.5, sigma=0.5, dims=["subjects"])  # -2 < Bf_logit < -1
+                Bf_logit = pm.Normal("Bf_logit", mu=priors['Bf_logit_mu_mu'], sigma=priors['Bf_logit_sd_mu'], dims=["subjects"])  # -2 < Bf_logit < -1
                 Bf = pm.Deterministic("Bf", pm.math.sigmoid(Bf_logit), dims=["subjects"]) # 0.12 < Bf < 0.27   
-                Bs1_logit = pm.Normal("Bs1_logit", mu=-1.7, sigma=0.5, dims=["subjects"])  # -2 < Bs1_logit < 0
+                Bs1_logit = pm.Normal("Bs1_logit", mu=priors['Bs1_logit_mu_mu'], sigma=priors['Bs1_logit_sd_mu'], dims=["subjects"])  # -2 < Bs1_logit < 0
                 Bs_logit = pm.Deterministic("Bs_logit", Bf_logit + Bs1_logit, dims=["subjects"])                  # Bs_logit < Bf_logit
                 Bs = pm.Deterministic("Bs", pm.math.sigmoid(Bs_logit), dims=["subjects"]) # Bs < Bf
-                var_total = pm.Gamma("var_total", mu=4, sigma=3, dims=["subjects"])
-                ratio_logit = pm.Normal("ratio_logit", mu=0, sigma=1, dims=["subjects"])  
+                var_total = pm.Gamma("var_total", mu=priors['var_total_mu_mu'], sigma=priors['var_total_sd_mu'], dims=["subjects"])
+                ratio_logit = pm.Normal("ratio_logit", mu=priors['ratio_logit_mu_mu'], sigma=priors['ratio_logit_sd_mu'], dims=["subjects"])  
                 ratio = pm.Deterministic("ratio", pm.math.sigmoid(ratio_logit), dims=["subjects"])
-                ratio2_logit = pm.Normal("ratio2_logit", mu=0, sigma=1, dims=["subjects"])  
+                ratio2_logit = pm.Normal("ratio2_logit", mu=priors['ratio2_logit_mu_mu'], sigma=priors['ratio2_logit_sd_mu'], dims=["subjects"])  
                 ratio2 = pm.Deterministic("ratio2", pm.math.sigmoid(ratio2_logit), dims=["subjects"])
                 var_etaf = pm.Deterministic("var_etaf", var_total * ratio * ratio2, dims=["subjects"])
                 sigma_etaf = pm.Deterministic("sigma_etaf", pm.math.sqrt(var_etaf), dims=["subjects"])
@@ -163,16 +145,26 @@ def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical):
                     num_trials=num_trials
                 )
         else:
+            if priors is None:
+                priors = {'A_logit_mu_mu':0,'A_logit_mu_sd':1,
+                'A_logit_sd_mu':2,'A_logit_sd_sd':1,
+                'B_logit_mu_mu':0,'B_logit_mu_sd':1,
+                'B_logit_sd_mu':2,'B_logit_sd_sd':1,
+                'var_total_mu_mu':2,'var_total_mu_sd':1,
+                'var_total_sd_mu':2,'var_total_sd_sd':1,
+                'ratio_logit_mu_mu':0,'ratio_logit_mu_sd':1,
+                'ratio_logit_sd_mu':2,'ratio_logit_sd_sd':1
+                }
             if hierarchical:
                 # Shared hyperparameters
-                A_logit_mu = pm.Normal("A_logit_mu", mu=0, sigma=1)
-                A_logit_sd = pm.Gamma("A_logit_sd", mu=2, sigma=1)
-                B_logit_mu = pm.Normal("B_logit_mu", mu=0, sigma=1)
-                B_logit_sd = pm.Gamma("B_logit_sd", mu=2, sigma=1)
-                var_total_mu = pm.Gamma("var_total_mu", mu=2, sigma=1)
-                var_total_sd = pm.Gamma("var_total_sd", mu=2, sigma=1)
-                ratio_logit_mu = pm.Normal("ratio_logit_mu", mu=0, sigma=1)
-                ratio_logit_sd = pm.Gamma("ratio_logit_sd", mu=2, sigma=1)
+                A_logit_mu = pm.Normal("A_logit_mu", mu=priors['A_logit_mu_mu'], sigma=priors['A_logit_mu_sd'])
+                A_logit_sd = pm.Gamma("A_logit_sd", mu=priors['A_logit_sd_mu'], sigma=priors['A_logit_sd_sd'])
+                B_logit_mu = pm.Normal("B_logit_mu", mu=priors['B_logit_mu_mu'], sigma=priors['B_logit_mu_sd'])
+                B_logit_sd = pm.Gamma("B_logit_sd", mu=priors['B_logit_sd_mu'], sigma=priors['B_logit_sd_sd'])
+                var_total_mu = pm.Gamma("var_total_mu", mu=priors['var_total_mu_mu'], sigma=priors['var_total_mu_sd'])
+                var_total_sd = pm.Gamma("var_total_sd", mu=priors['var_total_sd_mu'], sigma=priors['var_total_sd_sd'])
+                ratio_logit_mu = pm.Normal("ratio_logit_mu", mu=priors['ratio_logit_mu_mu'], sigma=priors['ratio_logit_mu_sd'])
+                ratio_logit_sd = pm.Gamma("ratio_logit_sd", mu=priors['ratio_logit_sd_mu'], sigma=priors['ratio_logit_sd_sd'])
 
                 # Subject-level parameters (with dims)
                 A_logit = pm.Normal("A_logit", mu=A_logit_mu, sigma=A_logit_sd, dims=["subjects"])  
@@ -188,12 +180,12 @@ def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical):
                 sigma_epsilon = pm.Deterministic("sigma_epsilon", pm.math.sqrt(var_epsilon), dims=["subjects"])
             else:
                 # Subject-level parameters (with dims)
-                A_logit = pm.Normal("A_logit", mu=0, sigma=1, dims=["subjects"])  
+                A_logit = pm.Normal("A_logit", mu=priors['A_logit_mu_mu'], sigma=priors['A_logit_sd_mu'], dims=["subjects"])  
                 A = pm.Deterministic("A", pm.math.sigmoid(A_logit), dims=["subjects"])
-                B_logit = pm.Normal("B_logit", mu=0, sigma=1, dims=["subjects"])
+                B_logit = pm.Normal("B_logit", mu=priors['B_logit_mu_mu'], sigma=priors['B_logit_sd_mu'], dims=["subjects"])
                 B = pm.Deterministic("B", pm.math.sigmoid(B_logit), dims=["subjects"])
-                var_total = pm.Gamma("var_total", mu=4, sigma=3, dims=["subjects"])
-                ratio_logit = pm.Normal("ratio_logit", mu=0, sigma=1, dims=["subjects"])  
+                var_total = pm.Gamma("var_total", mu=priors['var_total_mu_mu'], sigma=priors['var_total_sd_mu'], dims=["subjects"])
+                ratio_logit = pm.Normal("ratio_logit", mu=priors['ratio_logit_mu_mu'], sigma=priors['ratio_logit_sd_mu'], dims=["subjects"])  
                 ratio = pm.Deterministic("ratio", pm.math.sigmoid(ratio_logit), dims=["subjects"])
                 var_eta = pm.Deterministic("var_eta", var_total * ratio, dims=["subjects"])
                 sigma_eta = pm.Deterministic("sigma_eta", pm.math.sqrt(var_eta), dims=["subjects"])
@@ -221,20 +213,63 @@ def run_motor_adaptation_model(Y, V, P, two_rate, hierarchical):
                     var_epsilon=var_epsilon_i,
                     num_trials=num_trials
                 )
-
         if platform.system() == 'Windows':
             idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="nutpie", nuts_sampler_kwargs={"backend": "jax", "gradient_backend": "jax"})
         else:     
-            idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="numpyro")
+            idata = pm.sample(1000, tune=1000, target_accept=0.95, model=mod, nuts_sampler="numpyro", nuts_sampler_kwargs={"chain_method": "vectorized"})
     return idata,mod
 
 def main():
-    start_time = time.time()
-    num_test_subjects = 1
-    Y = y_obs[0:num_test_subjects,:]
-    V = vision[0:num_test_subjects,:]
-    P = perturbation[0:num_test_subjects,:]
-    idata,mod = run_motor_adaptation_model(Y, V, P, two_rate=False, hierarchical=False)
-    print("---%s seconds ----" % (time.time()-start_time))
+    # Load Gen R data
+    # To do
+    
+    param_file = 'output/jonker-neuroimage-2021/motor-adaptation-one-rate.nc'
+    p_o_r = az.from_netcdf(param_file)
+    p_o_r = p_o_r.posterior
+    p_o_r = {'rate':1,
+            'A_logit_mu_mu': p_o_r.A_logit_mu.mean().to_numpy(),'A_logit_mu_sd':p_o_r.A_logit_mu.std().to_numpy(),
+            'A_logit_sd_mu':p_o_r.A_logit_sd.mean().to_numpy(),'A_logit_sd_sd':p_o_r.A_logit_sd.std().to_numpy(),
+            'B_logit_mu_mu':p_o_r.B_logit_mu.mean().to_numpy(),'B_logit_mu_sd':p_o_r.B_logit_mu.std().to_numpy(),
+            'B_logit_sd_mu':p_o_r.B_logit_sd.mean().to_numpy(),'B_logit_sd_sd':p_o_r.B_logit_sd.std().to_numpy(),
+            'var_total_mu_mu':p_o_r.var_total_mu.mean().to_numpy(),'var_total_mu_sd':p_o_r.var_total_mu.std().to_numpy(),
+            'var_total_sd_mu':p_o_r.var_total_sd.mean().to_numpy(),'var_total_sd_sd':p_o_r.var_total_sd.std().to_numpy(),
+            'ratio_logit_mu_mu':p_o_r.ratio_logit_mu.mean().to_numpy(),'ratio_logit_mu_sd':p_o_r.ratio_logit_mu.std().to_numpy(),
+            'ratio_logit_sd_mu':p_o_r.ratio_logit_sd.mean().to_numpy(),'ratio_logit_sd_sd':p_o_r.ratio_logit_sd.std().to_numpy()
+            }
+
+    param_file = 'output/jonker-neuroimage-2021/motor-adaptation-two-rate.nc'
+    p_t_r = az.from_netcdf(param_file)
+    p_t_r = p_t_r.posterior
+    p_t_r = {'rate':2,
+            'imAf_logit_mu_mu':p_t_r.imAf_logit_mu.mean().to_numpy(),'imAf_logit_mu_sd':p_t_r.imAf_logit_mu.std().to_numpy(),
+            'imAf_logit_sd_mu':p_t_r.imAf_logit_sd.mean().to_numpy(),'imAf_logit_sd_sd':p_t_r.imAf_logit_sd.std().to_numpy(),
+            'imAs_logit_mu_mu':p_t_r.imAs_logit_mu.mean().to_numpy(),'imAs_logit_mu_sd':p_t_r.imAs_logit_mu.std().to_numpy(),
+            'imAs_logit_sd_mu':p_t_r.imAs_logit_sd.mean().to_numpy(),'imAs_logit_sd_sd':p_t_r.imAs_logit_sd.std().to_numpy(),
+            'Bf_logit_mu_mu':p_t_r.Bf_logit_mu.mean().to_numpy(),'Bf_logit_mu_sd':p_t_r.Bf_logit_mu.std().to_numpy(),
+            'Bf_logit_sd_mu':p_t_r.Bf_logit_sd.mean().to_numpy(),'Bf_logit_sd_sd':p_t_r.Bf_logit_sd.std().to_numpy(),
+            'Bs1_logit_mu_mu':p_t_r.Bs1_logit_mu.mean().to_numpy(),'Bs1_logit_mu_sd':p_t_r.Bs1_logit_mu.std().to_numpy(),
+            'Bs1_logit_sd_mu':p_t_r.Bs1_logit_sd.mean().to_numpy(),'Bs1_logit_sd_sd':p_t_r.Bs1_logit_sd.std().to_numpy(),
+            'var_total_mu_mu':p_t_r.var_total_mu.mean().to_numpy(),'var_total_mu_sd':p_t_r.var_total_mu.std().to_numpy(),
+            'var_total_sd_mu':p_t_r.var_total_sd.mean().to_numpy(),'var_total_sd_sd':p_t_r.var_total_sd.std().to_numpy(),
+            'ratio_logit_mu_mu':p_t_r.ratio_logit_mu.mean().to_numpy(),'ratio_logit_mu_sd':p_t_r.ratio_logit_mu.std().to_numpy(),
+            'ratio_logit_sd_mu':p_t_r.ratio_logit_sd.mean().to_numpy(),'ratio_logit_sd_sd':p_t_r.ratio_logit_sd.std().to_numpy(),
+            'ratio2_logit_mu_mu':p_t_r.ratio2_logit_mu.mean().to_numpy(),'ratio2_logit_mu_sd':p_t_r.ratio2_logit_mu.std().to_numpy(),
+            'ratio2_logit_sd_mu':p_t_r.ratio2_logit_sd.mean().to_numpy(),'ratio2_logit_sd_sd':p_t_r.ratio2_logit_sd.std().to_numpy()
+            }
+    
+    # Run one rate hierarchical model
+    fname = 'output/Gen-R/motor-adaptation-one-rate.nc'
+    if not os.path.isfile(fname):
+        idata,mod = run_motor_adaptation_model(Y, V, P, two_rate = False, hierarchical=True, priors=p_o_r)
+        pm.sample_posterior_predictive(idata,mod,extend_inferencedata=True)
+        idata.to_netcdf(fname)
+
+    # Run two rate hierarchical model
+    fname = 'output/Gen-R/motor-adaptation-two-rate.nc'
+    if not os.path.isfile(fname):
+        idata,mod = run_motor_adaptation_model(Y, V, P, two_rate = True, hierarchical=True, priors=p_t_r)
+        pm.sample_posterior_predictive(idata,mod,extend_inferencedata=True)
+        idata.to_netcdf(fname)
+
 if __name__ == '__main__':
     main()
