@@ -1,12 +1,10 @@
 [workspace]
 authors = ["Opher Donchin <donchin@bgu.ac.il>"]
-channels = ["conda-forge","nvidia"]
+channels = ["conda-forge"]
 name = "pymc_environment"
 platforms = ["linux-64"]
 version = "0.1.0"
 preview = ["pixi-build"]
-
-[tasks]
 
 [dependencies]
 arviz = "*"

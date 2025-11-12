@@ -2,14 +2,9 @@
 authors = ["Opher Donchin <donchin@bgu.ac.il>"]
 channels = ["conda-forge","nvidia"]
 name = "pymc_environment"
-platforms = ["linux-64"]
+platforms = ["win-64"]
 version = "0.1.0"
 preview = ["pixi-build"]
-
-[tasks]
-
-[system-requirements]
-#cuda = "13.0"
 
 [dependencies]
 arviz = "*"
@@ -37,10 +32,9 @@ nutpie = "*"
 bambi = "*"
 preliz = "*"
 threadpoolctl = "*"
-numpyro = "*"
-jax = "*"
-jaxlib = "*"
 
 [pypi-dependencies]
 pymc-extras = { git = "https://github.com/opherdonchin/pymc-extras.git", rev = "main" }
 kulprit = "*"
+jax = "*"
+numpyro = "*"
