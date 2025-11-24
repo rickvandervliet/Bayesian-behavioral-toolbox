@@ -330,7 +330,7 @@ def main():
         pm.sample_posterior_predictive(idata,mod,extend_inferencedata=True)
         idata.to_netcdf(fname)
     else:
-        print('Using existing fit for the one rate model.')        
+        print('Using existing fit for the two rate model.')        
 
     param_file = 'output/jonker-neuroimage-2021/motor-adaptation-one-rate.nc'
     p_o_r = az.from_netcdf(param_file)
@@ -380,7 +380,7 @@ def main():
     with open('output/simulations/gen_params_two_rate.pickle', 'wb') as handle:        
         pickle.dump(gen_params_two_rate, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    # Estimate parameters with Bayesian or EM implementations of one and two rate models
+    #Estimate parameters with Bayesian or EM implementations of one and two rate models
     idata,mod = run_motor_adaptation_model(y_obs_one_rate, vision, perturbation, two_rate=False, hierarchical=False, priors=p_o_r)
     pm.sample_posterior_predictive(idata,mod,extend_inferencedata=True)
     idata.to_netcdf('output/simulations/data-one-rate-model-one-rate-non-hierarchical.nc')
